@@ -71,11 +71,11 @@ final class SpinozaWriter
                         if ($phpDocReader->hasAnnotation(self::ROUTE_ANNOTATION)) {
                             foreach ($phpDocReader->getAnnotationsByName(self::ROUTE_ANNOTATION) as $annotation) {
                                 /** @var PhpDocLine $annotation */
-                                if (empty($collect[$annotation->getRouteId()])) {
+                                if (empty($collect['routes'][$annotation->getRouteId()])) {
                                     $collect['routes'][$annotation->getRouteId()] = $annotation->getDescription();
                                 }
 
-                                $collect['routes'][$annotation->getRouteId()]['possession'][$file] = true;
+                                $collect['routes'][$annotation->getRouteId()]['possession'][] = $file;
                             }
                         }
 
@@ -123,7 +123,7 @@ MARKDOWN;
 MARKDOWN;
 
         foreach ($data['routes'] as $route) {
-            $text .= '|'.$route['method'].'|'.$route['route'].'|'.$route['usage'].'|'.implode(', ', array_keys($route['possession'])).'|'.PHP_EOL;
+            $text .= '|'.$route['method'].'|'.$route['route'].'|'.$route['usage'].'|'.implode(', ', ($route['possession'])).'|'.PHP_EOL;
         }
 
         File::put(base_path('docs/dependencies.md'), $text);
