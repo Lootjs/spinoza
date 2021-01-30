@@ -110,7 +110,7 @@ final class SpinozaWriter
 MARKDOWN;
 
         foreach ($data['events'] as $event) {
-            $text .= '|  '.$event['name'].' | '.$event['exchange'].'  |  '.$event['routing_key'].' |';
+            $text .= '|  '.$event['name'].' | '.$event['exchange'].'  |  '.$event['routing_key'].' |'.PHP_EOL;
         }
 
         $text .= <<<MARKDOWN
