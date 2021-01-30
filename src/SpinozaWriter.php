@@ -123,7 +123,7 @@ MARKDOWN;
 MARKDOWN;
 
         foreach ($data['routes'] as $route) {
-            $text .= '|'.$route['method'].'|'.$route['route'].'|'.$route['usage'].'|'.implode(', ', array_keys($route['possession']));
+            $text .= '|'.$route['method'].'|'.$route['route'].'|'.$route['usage'].'|'.implode(', ', array_keys($route['possession'])).'|'.PHP_EOL;
         }
 
         File::put(base_path('docs/dependencies.md'), $text);
