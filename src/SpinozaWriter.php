@@ -2,11 +2,21 @@
 
 namespace Loot\Spinoza;
 
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\File;
+use Loot\PhpDocReader\PhpDocLine;
+use Loot\PhpDocReader\PhpDocReader;
+use Symfony\Component\Finder\SplFileInfo;
 
 final class SpinozaWriter
 {
-    private $cacheFile = 'spinoza.php';
+    /**
+     * @var CacheManager
+     */
+    private $cacheManager;
+
+    const ROUTE_ANNOTATION = '@spinoza-register-route';
+    const EVENT_ANNOTATION = '@spinoza-register-event';
 
     /**
      * Spinoza constructor.
@@ -14,58 +24,108 @@ final class SpinozaWriter
      */
     public function __construct(bool $forceUpdate = false)
     {
+        $this->cacheManager = app(CacheManager::class);
+
         if ($forceUpdate) {
-            $this->initForceUpdate();
-        }
-
-        $classes = $this->getClassFiles();
-
-    }
-
-    private function initForceUpdate(): void
-    {
-        if (Storage::exists($this->cacheFile)) {
-            Storage::delete($this->cacheFile);
+            $this->cacheManager->initForceUpdate();
         }
     }
 
-    private function getClassFiles(): array
+    private function getApplicationFiles(): array
     {
-        $cache = $this->getCacheFiles();
-
-        $files = $this->openDir(app_path('Http'));
-
-        Storage::put($this->cacheFile, json_encode($files));
-
-        return $files;
-        //dd($files);
-    }
-
-    private function getCacheFiles(): array
-    {
-        if (Storage::exists($this->cacheFile)) {
-            return include($this->cacheFile);
-        }
-
-        return [];
-    }
-
-    private function openDir(string $dir): array
-    {
+        /**
+         * @var $files SplFileInfo[]
+         */
+        $findFiles = File::allFiles(app_path()); // @todo bottle-neck
         $files = [];
 
-        if ($handle = opendir($dir)) {
-            while (false !== ($entry = readdir($handle))) {
-                if (is_dir($entry)) {
-                    //$files[] = $this->openDir($entry);
-                } else {
-                    $files[] = $entry;
-                }
-            }
-
-            closedir($handle);
+        foreach ($findFiles as $file) {
+            $files[$file->getRelativePathname()] = $file->getMTime();
         }
 
         return $files;
+    }
+
+    public function collectData(): array
+    {
+        $collect = [
+            'routes' => [],
+            'events' => [],
+        ];
+        $files = $this->getApplicationFiles();
+        $this->cacheManager->saveCacheFiles($files);
+
+        foreach ($files as $file => $editDate) {
+            // @todo Чтение из кеша!
+            if (false) {//$this->cacheManager->fileNotChanged($file)) {
+                //$cache->getforfile($file);
+            } else {
+                $source = file_get_contents(app_path($file));
+                $tokens = token_get_all($source);
+
+                foreach ($tokens as $token) {
+                    if ($token[0] === T_DOC_COMMENT) {
+                        $phpDocReader = new PhpDocReader($token[1]);
+
+                        // @todo вынести все аннотации в отдельные классы
+                        if ($phpDocReader->hasAnnotation(self::ROUTE_ANNOTATION)) {
+                            foreach ($phpDocReader->getAnnotationsByName(self::ROUTE_ANNOTATION) as $annotation) {
+                                /** @var PhpDocLine $annotation */
+                                if (empty($collect[$annotation->getRouteId()])) {
+                                    $collect['routes'][$annotation->getRouteId()] = $annotation->getDescription();
+                                }
+
+                                $collect['routes'][$annotation->getRouteId()]['possession'][$file] = true;
+                            }
+                        }
+
+                        if ($phpDocReader->hasAnnotation(self::EVENT_ANNOTATION)) {
+                            foreach ($phpDocReader->getAnnotationsByName(self::EVENT_ANNOTATION) as $annotation) {
+                                /** @var PhpDocLine $annotation */
+                                $collect['events'][] = $annotation->getDescription();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return $collect;
+    }
+
+    /**
+     * @param array $data
+     */
+    public function writeDocs(array $data)
+    {
+        if (!is_dir(base_path('docs'))) {
+            mkdir(base_path('docs'));
+        }
+
+        $text = <<<MARKDOWN
+## Подписан на события
+| name  | exchange  |  routing_key |
+|---|---|---|
+
+MARKDOWN;
+
+        foreach ($data['events'] as $event) {
+            $text .= '|  '.$event['name'].' | '.$event['exchange'].'  |  '.$event['routing_key'].' |';
+        }
+
+        $text .= <<<MARKDOWN
+
+
+## Вызывает по HTTP
+|method| route  | usage  |  Применяется в |
+|---|---|---|---|
+
+MARKDOWN;
+
+        foreach ($data['routes'] as $route) {
+            $text .= '|'.$route['method'].'|'.$route['route'].'|'.$route['usage'].'|'.implode(', ', array_keys($route['possession']));
+        }
+
+        File::put(base_path('docs/dependencies.md'), $text);
     }
 }
