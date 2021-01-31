@@ -2,10 +2,10 @@
 
 namespace Loot\Spinoza;
 
-use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\File;
 use Loot\PhpDocReader\PhpDocLine;
 use Loot\PhpDocReader\PhpDocReader;
+use Loot\Spinoza\Parsers\EventParser;
 use Symfony\Component\Finder\SplFileInfo;
 
 final class SpinozaWriter
@@ -16,7 +16,6 @@ final class SpinozaWriter
     private $cacheManager;
 
     const ROUTE_ANNOTATION = '@spinoza-register-route';
-    const EVENT_ANNOTATION = '@spinoza-register-event';
 
     /**
      * Spinoza constructor.
@@ -78,17 +77,12 @@ final class SpinozaWriter
                                 $collect['routes'][$annotation->getRouteId()]['possession'][] = $file;
                             }
                         }
-
-                        if ($phpDocReader->hasAnnotation(self::EVENT_ANNOTATION)) {
-                            foreach ($phpDocReader->getAnnotationsByName(self::EVENT_ANNOTATION) as $annotation) {
-                                /** @var PhpDocLine $annotation */
-                                $collect['events'][] = $annotation->getDescription();
-                            }
-                        }
                     }
                 }
             }
         }
+
+        $collect['events'] = EventParser::init();
 
         return $collect;
     }
@@ -110,7 +104,11 @@ final class SpinozaWriter
 MARKDOWN;
 
         foreach ($data['events'] as $event) {
-            $text .= '|  '.$event['name'].' | '.$event['exchange'].'  |  '.$event['routing_key'].' |'.PHP_EOL;
+            if (empty($event['queue'])) {
+                continue;
+            }
+
+            $text .= '|  '.$event['queue'].' | '.$event['exchange'].'  |  '.$event['routing_key'].' |'.PHP_EOL;
         }
 
         $text .= <<<MARKDOWN
