@@ -2,14 +2,15 @@
 `Ignorantia nоn est argumentum. Незнание — не аргумент. © Spinoza`
 
 ## Install
-composer require loot/spinoza
-
+```
+composer require --dev loot/spinoza
+```
 ## Генерация документации
-```shell script
+```
 php artisan spinoza:generate
 ```
 Если нужно обновить кэш файлов:
-```shell script
+```
 php artisan spinoza:generate --force-update
 ```
 ## Регистрация роутов

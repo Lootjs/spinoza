@@ -2,6 +2,7 @@
     "name": "loot/spinoza",
     "description": "Package can generate documentation for service",
     "license": "MIT",
+    "type": "psalm-plugin",
     "version": "0.1",
     "authors": [
         {
@@ -22,6 +23,9 @@
             "providers": [
                 "Loot\\Spinoza\\SpinozaServiceProvider"
             ]
+        },
+        "psalm": {
+            "pluginClass": "Loot\\Spinoza\\Plugin"
         }
     }
 }
