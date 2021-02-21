@@ -103,7 +103,7 @@ MARKDOWN;
                 continue;
             }
 
-            $text .= '|  '.$event['queue'].' | '.$event['exchange'].'  |  '.$event['routing_key'].' |'.PHP_EOL;
+            $text .= '|  '.$event['queue'].' | '.$event['exchange'].'  |  '.($event['routing_key'] ?? '').' |'.PHP_EOL;
         }
 
         $text .= <<<MARKDOWN
@@ -116,7 +116,7 @@ MARKDOWN;
 MARKDOWN;
 
         foreach ($data['routes'] as $route) {
-            $text .= '|'.$route['method'].'|'.$route['route'].'|'.$route['usage'].'|'.implode(', ', ($route['possession'])).'|'.PHP_EOL;
+            $text .= '|'.$route['method'].'|'.$route['route'].'| '.$route['usage'].' |'.implode(', ', (array_unique($route['possession']))).'|'.PHP_EOL;
         }
 
         File::put(base_path('docs/dependencies.md'), $text);
