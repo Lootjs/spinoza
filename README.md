@@ -7,11 +7,7 @@ composer require --dev loot/spinoza
 ```
 ## Генерация документации
 ```
-php artisan spinoza:generate
-```
-Если нужно обновить кэш файлов:
-```
-php artisan spinoza:generate --force-update
+php artisan larabase:generate-docs
 ```
 ## Регистрация роутов
 @spinoza-register-route принимает json object. 
