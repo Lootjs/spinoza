@@ -6,7 +6,7 @@ final class EventParser {
     /**
      * @return array
      */
-    public static function init()
+    public function init()
     {
         $collect = [];
         $data = parse_ini_file(base_path('docker/circus.ini'), true, INI_SCANNER_RAW);
@@ -16,7 +16,7 @@ final class EventParser {
                 $cmd = str_replace('php artisan ', '', $worker['cmd']);
                 $cmdChunks = explode(' ', $cmd);
 
-                $collect[] = static::parse($cmdChunks);
+                $collect[] = self::parse($cmdChunks);
             }
         }
 
@@ -27,7 +27,7 @@ final class EventParser {
      * @param array $chunks
      * @return array
      */
-    public static function parse(array $chunks): array
+    private static function parse(array $chunks): array
     {
         $data = [];
         array_shift($chunks);

@@ -7,7 +7,7 @@ use Loot\Spinoza\SpinozaWriter;
 
 final class GenerateDocs extends Command
 {
-    protected $signature = 'spinoza:generate {--force-update : Обновить кэш классов}';
+    protected $signature = 'larabase:generate-docs';
 
     /**
      * The console command description.
@@ -29,18 +29,20 @@ final class GenerateDocs extends Command
     /**
      * Execute the console command.
      *
+     * @param SpinozaWriter $spinoza
      * @return void
      */
-    public function handle()
+    public function handle(SpinozaWriter $spinoza)
     {
         $start = \microtime(true);
 
-        $spinoza = (new SpinozaWriter);
-        $data = $spinoza->collectData();
-        $spinoza->writeDocs($data);
+        $spinoza->writeDocs(
+            $data = $spinoza->collectData()
+        );
 
         $end = \microtime(true);
-        $this->info(\sprintf('Find %s annotations', count($data['routes']) + count($data['events'])));
-        $this->info(\sprintf('Elapsed time: %ss', round($end - $start, 3)));
+        $this->table(['Sapere aude'], []);
+        $this->comment(\sprintf('Find %s rows', count($data['routes']) + count($data['events'])));
+        $this->comment(\sprintf('Elapsed time: %ss', round($end - $start, 3)));
     }
 }

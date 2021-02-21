@@ -6,7 +6,7 @@ namespace Loot\Spinoza\Hooks;
 
 use Loot\PhpDocReader\PhpDocReader;
 use Loot\Spinoza\Issues\HttpClientUsed;
-use Loot\Spinoza\SpinozaWriter;
+use Loot\Spinoza\Parsers\RouteParser;
 use Psalm\Codebase;
 use PhpParser\Node\Expr;
 use Psalm\Plugin\Hook\AfterExpressionAnalysisInterface;
@@ -17,13 +17,6 @@ use Psalm\CodeLocation;
 
 final class PreventWrongHttpClientUsage implements AfterExpressionAnalysisInterface
 {
-    /**
-     * @var array of http classes that Rahmet has.
-     */
-    private static $httpClasses = [
-        'App\Core\Paloma365\Request',
-    ];
-
     /**
      * {@inheritdoc}
      */
@@ -42,7 +35,7 @@ final class PreventWrongHttpClientUsage implements AfterExpressionAnalysisInterf
                 $reflection = new \ReflectionMethod($context->self, $methodName);
                 $phpdocs = new PhpDocReader($reflection->getDocComment());
 
-                if (self::isHttpClientCall($class) && !$phpdocs->hasAnnotation(SpinozaWriter::ROUTE_ANNOTATION)) {
+                if (self::isHttpClientCall($class) && !$phpdocs->hasAnnotation(RouteParser::ROUTE_ANNOTATION)) {
                     IssueBuffer::accepts(
                         new HttpClientUsed(
                             new CodeLocation($statements_source, $expr)
@@ -63,7 +56,7 @@ final class PreventWrongHttpClientUsage implements AfterExpressionAnalysisInterf
      */
     private static function isHttpClientCall($resolvedName): bool
     {
-        if (in_array($resolvedName, array_merge(self::$httpClasses))) {
+        if (in_array($resolvedName, array_merge(config('app.httpClasses', [])))) {
             return true;
         }
 
@@ -77,7 +70,7 @@ final class PreventWrongHttpClientUsage implements AfterExpressionAnalysisInterf
                 $reflection = $parent;
             }
 
-            if (self::instanceOfHttpClient($parentsClass, self::$httpClasses)) {
+            if (self::instanceOfHttpClient($parentsClass, config('app.httpClasses', []))) {
                 return true;
             }
         } catch (\ReflectionException $exception) {

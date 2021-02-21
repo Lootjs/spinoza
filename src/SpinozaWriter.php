@@ -3,10 +3,8 @@
 namespace Loot\Spinoza;
 
 use Illuminate\Support\Facades\File;
-use Loot\PhpDocReader\PhpDocLine;
-use Loot\PhpDocReader\PhpDocReader;
 use Loot\Spinoza\Parsers\EventParser;
-use Symfony\Component\Finder\SplFileInfo;
+use Loot\Spinoza\Parsers\RouteParser;
 
 final class SpinozaWriter
 {
@@ -15,31 +13,33 @@ final class SpinozaWriter
      */
     private $cacheManager;
 
-    const ROUTE_ANNOTATION = '@spinoza-register-route';
+    /**
+     * @var EventParser
+     */
+    private $eventParser;
+
+    /**
+     * @var RouteParser
+     */
+    private $routeParser;
 
     /**
      * Spinoza constructor.
-     * @param bool $forceUpdate
      */
-    public function __construct(bool $forceUpdate = false)
+    public function __construct(CacheManager $cacheManager, EventParser $eventParser, RouteParser $routeParser)
     {
-        $this->cacheManager = app(CacheManager::class);
-
-        if ($forceUpdate) {
-            $this->cacheManager->initForceUpdate();
-        }
+        $this->cacheManager = $cacheManager;
+        $this->eventParser = $eventParser;
+        $this->routeParser = $routeParser;
     }
 
     private function getApplicationFiles(): array
     {
-        /**
-         * @var $files SplFileInfo[]
-         */
-        $findFiles = File::allFiles(app_path()); // @todo bottle-neck
+        $findFiles = File::allFiles(app_path());
         $files = [];
 
         foreach ($findFiles as $file) {
-            $files[$file->getRelativePathname()] = $file->getMTime();
+            $files[$file->getRelativePathname()] = [];
         }
 
         return $files;
@@ -52,37 +52,32 @@ final class SpinozaWriter
             'events' => [],
         ];
         $files = $this->getApplicationFiles();
-        $this->cacheManager->saveCacheFiles($files);
 
-        foreach ($files as $file => $editDate) {
-            // @todo Чтение из кеша!
-            if (false) {//$this->cacheManager->fileNotChanged($file)) {
-                //$cache->getforfile($file);
+        foreach ($files as $file => $value) {
+            if ($this->cacheManager->fileNotChanged($file)) {
+                $collect['routes'] = array_merge(
+                    $collect['routes'],
+                    $this->routeParser->init($this->cacheManager->getAnnotationsForFile($file), $file)
+                );
             } else {
                 $source = file_get_contents(app_path($file));
                 $tokens = token_get_all($source);
 
                 foreach ($tokens as $token) {
                     if ($token[0] === T_DOC_COMMENT) {
-                        $phpDocReader = new PhpDocReader($token[1]);
-
-                        // @todo вынести все аннотации в отдельные классы
-                        if ($phpDocReader->hasAnnotation(self::ROUTE_ANNOTATION)) {
-                            foreach ($phpDocReader->getAnnotationsByName(self::ROUTE_ANNOTATION) as $annotation) {
-                                /** @var PhpDocLine $annotation */
-                                if (empty($collect['routes'][$annotation->getRouteId()])) {
-                                    $collect['routes'][$annotation->getRouteId()] = $annotation->getDescription();
-                                }
-
-                                $collect['routes'][$annotation->getRouteId()]['possession'][] = $file;
-                            }
-                        }
+                        $this->cacheManager->saveAnnotationsForFile($file, $token[1]);
+                        $collect['routes'] = array_merge(
+                            $collect['routes'],
+                            $this->routeParser->init([$token[1]], $file)
+                        );
                     }
                 }
+
+                $this->cacheManager->saveEditedTimeForFile($file);
             }
         }
 
-        $collect['events'] = EventParser::init();
+        $collect['events'] = $this->eventParser->init();
 
         return $collect;
     }

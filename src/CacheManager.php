@@ -10,7 +10,7 @@ final class CacheManager
     /**
      * @var string
      */
-    private $cacheFile = 'spinoza-cache-files.php';
+    private $cacheFile = 'spinoza-cache-files.json';
 
     /**
      * @var array
@@ -22,25 +22,15 @@ final class CacheManager
         $this->cachedData = $this->getCacheFiles();
     }
 
-    public function initForceUpdate(): void
+    public function saveCacheState(): void
     {
-        if (Storage::exists($this->cacheFile)) {
-            Storage::delete($this->cacheFile);
-        }
-    }
-
-    /**
-     * @param array $files
-     */
-    public function saveCacheFiles(array $files): void
-    {
-        Storage::put($this->cacheFile, '<?php return '.var_export($files, true).';');
+        Storage::put($this->cacheFile, json_encode($this->cachedData));
     }
 
     private function getCacheFiles(): array
     {
         if (Storage::exists($this->cacheFile)) {
-            return require_once storage_path('app/'.$this->cacheFile);
+            return json_decode(Storage::get($this->cacheFile), true);
         }
 
         return [];
@@ -48,6 +38,23 @@ final class CacheManager
 
     public function fileNotChanged(string $file): bool
     {
-        return Arr::get($this->cachedData, $file, 0) === filemtime(app_path($file));
+        return isset($this->cachedData[$file]['editedAt']) && $this->cachedData[$file]['editedAt'] === filemtime(app_path($file));
+    }
+
+    public function saveAnnotationsForFile(string $file, string $annotations): void
+    {
+        $this->cachedData[$file]['annotations'][] = $annotations;
+        $this->saveCacheState();
+    }
+
+    public function saveEditedTimeForFile(string $file): void
+    {
+        $this->cachedData[$file]['editedAt'] = filemtime(app_path($file));
+        $this->saveCacheState();
+    }
+
+    public function getAnnotationsForFile(string $file): array
+    {
+        return $this->cachedData[$file]['annotations'] ?? [];
     }
 }
