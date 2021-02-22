@@ -9,14 +9,17 @@ final class EventParser {
     public function init()
     {
         $collect = [];
-        $data = parse_ini_file(base_path('docker/circus.ini'), true, INI_SCANNER_RAW);
+        
+        if (file_exists(base_path('docker/circus.ini'))) {
+            $data = parse_ini_file(base_path('docker/circus.ini'), true, INI_SCANNER_RAW);
 
-        foreach ($data as $worker) {
-            if (isset($worker['cmd'])) {
-                $cmd = str_replace('php artisan ', '', $worker['cmd']);
-                $cmdChunks = explode(' ', $cmd);
+            foreach ($data as $worker) {
+                if (isset($worker['cmd'])) {
+                    $cmd = str_replace('php artisan ', '', $worker['cmd']);
+                    $cmdChunks = explode(' ', $cmd);
 
-                $collect[] = self::parse($cmdChunks);
+                    $collect[] = self::parse($cmdChunks);
+                }
             }
         }
 
