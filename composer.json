@@ -3,7 +3,7 @@
     "description": "Package can generate documentation for service",
     "license": "MIT",
     "type": "psalm-plugin",
-    "version": "0.2.3",
+    "version": "0.2.5",
     "authors": [
         {
             "name": "Loot",
